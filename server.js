@@ -1,22 +1,22 @@
-// server/server.js
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const WebSocket = require('ws');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const wss = new WebSocket.Server({ server });
 
-io.on('connection', (socket) => {
-  socket.on('callUser', (data) => {
-    io.to(data.userToCall).emit('callUser', { signal: data.signalData, from: data.from });
+wss.on('connection', (ws) => {
+  ws.on('message', (message) => {
+    console.log('received: %s', message);
+    // handle different message types (e.g., callUser, acceptCall) based on your logic
   });
 
-  socket.on('acceptCall', (data) => {
-    io.to(data.to).emit('callAccepted', data.signal);
-  });
+  ws.send('something');
 });
+
 app.get('/test', (req, res) => {
   res.send('Server is running');
 });
+
 server.listen(80, () => console.log('Server is running on port 80'));
