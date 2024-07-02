@@ -16,5 +16,7 @@ io.on('connection', (socket) => {
     io.to(data.to).emit('callAccepted', data.signal);
   });
 });
-
+app.get('/test', (req, res) => {
+  res.send('Server is running');
+});
 server.listen(4000, () => console.log('Server is running on port 4000'));
