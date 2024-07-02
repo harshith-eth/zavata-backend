@@ -19,4 +19,4 @@ io.on('connection', (socket) => {
 app.get('/test', (req, res) => {
   res.send('Server is running');
 });
-server.listen(4000, () => console.log('Server is running on port 4000'));
+server.listen(80, () => console.log('Server is running on port 80'));
