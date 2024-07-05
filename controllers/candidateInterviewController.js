@@ -1,4 +1,5 @@
 const axios = require('axios');
+require('dotenv').config();
 
 exports.getInterviewData = (req, res) => {
   res.json({ message: 'Interview data' });
@@ -21,16 +22,16 @@ const handleInterviewQuestion = async (question) => {
     return "I'm here to conduct your interview. Let's focus on that.";
   }
 
-  const response = await getAzureAIResponse(question);
+  const response = await getOpenAIResponse(question);
   return response;
 };
 
-const getAzureAIResponse = async (question) => {
-  const apiKey = '9FRk6D9DYS2mgM2HtDVRJwNRca1KQfVT';
-  const endpoint = 'https://Meta-Llama-3-70B-Instruct-knfhq-serverless.eastus.inference.ai.azure.com/v1/chat/completions';
+const getOpenAIResponse = async (question) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const endpoint = process.env.OPENAI_ENDPOINT;
 
   try {
-    const response = await axios.post(endpoint, {
+    const response = await axios.post(`${endpoint}/v1/chat/completions`, {
       messages: [{ role: "user", content: question }],
     }, {
       headers: {
@@ -41,7 +42,7 @@ const getAzureAIResponse = async (question) => {
 
     return response.data.choices[0].message.content;
   } catch (error) {
-    console.error("Error calling Azure AI", error);
+    console.error("Error calling OpenAI", error);
     return "I'm sorry, I encountered an error processing your question.";
   }
 };

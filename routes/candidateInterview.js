@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const candidateInterviewController = require('../controllers/candidateInterviewController');
+const { getInterviewData, handleQuestion } = require('../controllers/candidateInterviewController');
 
-router.get('/', candidateInterviewController.getInterviewData);
-router.post('/question', candidateInterviewController.handleQuestion);
+router.get('/', getInterviewData);
+router.post('/question', handleQuestion);
 
 module.exports = router;

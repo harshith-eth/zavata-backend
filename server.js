@@ -3,6 +3,8 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const axios = require('axios');
+require('dotenv').config();
+const SpeechSDK = require('microsoft-cognitiveservices-speech-sdk');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,16 +42,16 @@ const handleInterviewQuestion = async (question) => {
     return "I'm here to conduct your interview. Let's focus on that.";
   }
 
-  const response = await getAzureAIResponse(question);
+  const response = await getOpenAIResponse(question);
   return response;
 };
 
-const getAzureAIResponse = async (question) => {
-  const apiKey = '9FRk6D9DYS2mgM2HtDVRJwNRca1KQfVT';
-  const endpoint = 'https://Meta-Llama-3-70B-Instruct-knfhq-serverless.eastus.inference.ai.azure.com/v1/chat/completions';
+const getOpenAIResponse = async (question) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const endpoint = process.env.OPENAI_ENDPOINT;
 
   try {
-    const response = await axios.post(endpoint, {
+    const response = await axios.post(`${endpoint}/v1/chat/completions`, {
       messages: [{ role: "user", content: question }],
     }, {
       headers: {
@@ -60,9 +62,49 @@ const getAzureAIResponse = async (question) => {
 
     return response.data.choices[0].message.content;
   } catch (error) {
-    console.error("Error calling Azure AI", error);
+    console.error("Error calling OpenAI", error);
     return "I'm sorry, I encountered an error processing your question.";
   }
+};
+
+// Audio processing functions
+const textToSpeech = (text) => {
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(process.env.AZURE_SPEECH_KEY, process.env.AZURE_SPEECH_REGION);
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
+  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+
+  synthesizer.speakTextAsync(text,
+    result => {
+      if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+        console.log("TTS: Synthesis finished.");
+      } else {
+        console.error("TTS: Speech synthesis canceled, " + result.errorDetails);
+      }
+      synthesizer.close();
+    },
+    error => {
+      console.error("TTS: Error synthesizing speech: " + error);
+      synthesizer.close();
+    });
+};
+
+const speechToText = (ws) => {
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(process.env.AZURE_SPEECH_KEY, process.env.AZURE_SPEECH_REGION);
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+  recognizer.recognizeOnceAsync(result => {
+    console.log('STT: RecognizeOnceAsync result:', result);
+    if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+      console.log(`STT: Recognized: ${result.text}`);
+      ws.send(JSON.stringify({ type: 'interviewQuestion', question: result.text })); // Send recognized text to server
+    } else {
+      console.error("STT: Error recognizing speech: " + result.errorDetails);
+    }
+    recognizer.close();
+  }, error => {
+    console.error("STT: Recognizer error: ", error);
+  });
 };
 
 app.get('*', (req, res) => {
